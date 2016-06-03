@@ -57,31 +57,33 @@ class SlackExporter:
         print("Processing", len(channels), "channels")
 
         for channel in channels:
-            self.channel_history(channel)
+            self.channel_history(channel, date_from, date_to)
             time.sleep(1)
 
-    def channel_history(self, channel):
+    def channel_history(self, channel, date_from, date_to):
         messages = []
-        oldest = time.mktime(datetime(2016, 4, 20).timetuple())
+        oldest = time.mktime(date_from.timetuple())
+        latest = time.mktime(date_to.timetuple())
 
-        # Upper limit for date
-        # Assuming we are getting data for 2016-04-20 to 2016-05-20
-        # it will work like this:
-        # get(2016-04-20, 2016-05-20)
-        # -> we actually receive data for (2016-05-19, 2016-05-20), so next:
-        # get(2016-04-20, 2016-05-19)
-        # -> we actually receive data for (2016-05-18, 2016-05-19), so next:
-        # We keep doing this until we either reach the end of messages or
-        # receive some messages from before the oldest date
-        ts = int(time.time())
-        while ts > oldest:
-            msgs = self.slack.channels.history(
-                channel=channel["id"], latest=ts, oldest=oldest,
-                count=1000).body["messages"]
+        # This method works by setting the latest date to the oldest date of
+        # the current chunk of messages. The oldest message happens to be the
+        # last message.
+        # -------------  [---]
+        # ---------- [---]---
+        # -------[---]--- ---
+        has_more = True
+        while has_more:
+            body = self.slack.channels.history(
+                channel=channel["id"], latest=latest, oldest=oldest,
+                count=100).body
+
+            msgs = body["messages"]
             if len(msgs) == 0:
                 break
+
             messages += msgs
-            ts = int(float(msgs[-1]["ts"]))
+            latest = int(float(msgs[-1]["ts"]))
+            has_more = body["has_more"]
 
         chan_log = os.path.join(self.logs_dir, channel["name"]+".json")
         with open(chan_log, "w") as f:
@@ -139,7 +141,6 @@ def main():
                         type=valid_date)
 
     args = parser.parse_args()
-    print(args.date_start)
 
     exporter = SlackExporter(token, args.data)
 
@@ -147,7 +148,8 @@ def main():
         exporter.users()
 
     if args.messages:
-        exporter.channels("start", "end", args.min_members, not args.archived)
+        exporter.channels(args.date_start, args.date_end, args.min_members,
+                          not args.archived)
 
 if __name__ == "__main__":
     main()
