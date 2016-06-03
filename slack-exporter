@@ -17,6 +17,8 @@ from datetime import datetime, date
 
 from slacker import Slacker
 
+BEGINNING_OF_TIME = "the beginning of time"
+
 
 class SlackExporter:
     def __init__(self, token, data_dir):
@@ -92,6 +94,8 @@ class SlackExporter:
 
 def valid_date(s):
     try:
+        if s == BEGINNING_OF_TIME:
+            return date.min
         return datetime.strptime(s, "%Y-%m-%d")
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
@@ -132,7 +136,7 @@ def main():
 
     parser.add_argument("--date-start",
                         help="History start date - format YYYY-MM-DD ",
-                        required=True, type=valid_date)
+                        default=BEGINNING_OF_TIME, type=valid_date)
 
     parser.add_argument("--date-end",
                         help="History end date - format YYYY-MM-DD ",
