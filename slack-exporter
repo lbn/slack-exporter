@@ -148,6 +148,11 @@ def main():
 
     exporter = SlackExporter(token, args.data)
 
+    if args.date_start > args.date_end:
+        print("beep boop: user error")
+        print("Are you sure the start and end dates are the right way round?")
+        sys.exit(1)
+
     if args.users:
         exporter.users()
 
