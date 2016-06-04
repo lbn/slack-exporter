@@ -39,13 +39,17 @@ class SlackExporter:
             json.dump(users, f)
 
     def channels(self, date_from, date_to=None, min_members=None,
-                 no_archived=True):
+                 no_archived=True, channel_name=None):
         def matches(chan):
             match = True
             if min_members is not None:
                 match &= chan["num_members"] >= min_members
+
             if no_archived:
                 match &= not chan["is_archived"]
+
+            if channel_name is not None:
+                match &= chan["name"] == channel_name
             return match
 
         channels = [chan for chan in
@@ -96,7 +100,7 @@ def valid_date(s):
     try:
         if s == BEGINNING_OF_TIME:
             return date.min
-        return datetime.strptime(s, "%Y-%m-%d")
+        return datetime.strptime(s, "%Y-%m-%d").date()
     except ValueError:
         msg = "Not a valid date: '{0}'.".format(s)
         raise argparse.ArgumentTypeError(msg)
@@ -144,6 +148,9 @@ def main():
                         default=date.today().isoformat(),
                         type=valid_date)
 
+    parser.add_argument("--channel", type=str, default=None,
+                        help="Export this channel only")
+
     args = parser.parse_args()
 
     exporter = SlackExporter(token, args.data)
@@ -158,7 +165,7 @@ def main():
 
     if args.messages:
         exporter.channels(args.date_start, args.date_end, args.min_members,
-                          not args.archived)
+                          not args.archived, args.channel)
 
 if __name__ == "__main__":
     main()
