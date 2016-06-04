@@ -68,7 +68,7 @@ class SlackExporter:
 
     def channel_history(self, channel, date_from, date_to):
         messages = []
-        oldest = time.mktime(date_from.timetuple())
+        oldest = max(0, time.mktime(date_from.timetuple()))
         latest = time.mktime(date_to.timetuple())
 
         # This method works by setting the latest date to the oldest date of
